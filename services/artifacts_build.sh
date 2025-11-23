@@ -27,11 +27,13 @@ for service_name in "${services[@]}"; do
 
     # Execute the artifact_publish.sh script with the current service name as an argument.
     # The leading "./" ensures the script is run from the current directory.
-    sh artifact.sh "$service_name"
+    sh artifact.sh "$service_name" &
     
     # A separator to make the output easier to read.
     echo "--- Finished publishing for $service_name ---"
     echo ""
 done
+
+wait
 
 echo "All specified services have been processed."
