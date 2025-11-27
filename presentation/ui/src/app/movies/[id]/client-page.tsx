@@ -23,12 +23,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MovieChat } from '@/components/movie-chat';
 import { YouTubePlayerWrapper } from '@/components/youtube-player-wrapper';
-
-const getYouTubeId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-};
+import { getYouTubeId } from '@/lib/utils';
 
 const CategorySection = ({ title, items, icon }: { title: string; items: (string | Person)[] | undefined; icon: React.ReactNode }) => {
     if (!items || items.length === 0) return null;
@@ -391,8 +386,8 @@ export function MovieClientPage({ movie }: { movie: Movie }) {
         };
     }, []);
 
-    const isYouTube = movie.source === 'youtube';
-    const videoId = isYouTube ? getYouTubeId(movie.public_url) : null;
+    const videoId = getYouTubeId(movie.public_url);
+    const isYouTube = movie.source === 'youtube' || !!videoId;
 
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">

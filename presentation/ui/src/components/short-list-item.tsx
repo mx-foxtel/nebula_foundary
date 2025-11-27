@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -7,6 +6,9 @@ import type { Short } from '@/lib/types';
 import { PlayCircle } from 'lucide-react';
 import { useRef, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
+import YouTube from 'react-youtube';
+
+import { getYouTubeId } from '@/lib/utils';
 
 interface ShortListItemProps {
   short: Short;
@@ -34,7 +36,11 @@ export function ShortListItem({ short }: ShortListItemProps) {
   const startTime = parseTime(short.startTime) ?? 0;
   const endTime = parseTime(short.endTime);
 
+  const videoId = getYouTubeId(short.videoUrl);
+  const isYouTube = !!videoId;
+
   useEffect(() => {
+    if (isYouTube) return;
     const video = videoRef.current;
     if (!video) return;
 
@@ -53,10 +59,12 @@ export function ShortListItem({ short }: ShortListItemProps) {
     return () => {
       video.removeEventListener('loadedmetadata', setStartTime);
     };
-  }, [startTime]);
+  }, [startTime, isYouTube]);
 
   const handleMouseEnter = () => {
     setIsHovering(true);
+    if (isYouTube) return;
+
     const video = videoRef.current;
     if (video) {
       if (video.currentTime < startTime || (endTime && video.currentTime >= endTime)) {
@@ -68,6 +76,8 @@ export function ShortListItem({ short }: ShortListItemProps) {
 
   const handleMouseLeave = () => {
     setIsHovering(false);
+    if (isYouTube) return;
+
     const video = videoRef.current;
     if (video) {
       video.pause();
@@ -75,6 +85,8 @@ export function ShortListItem({ short }: ShortListItemProps) {
   };
 
   useEffect(() => {
+    if (isYouTube) return;
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -88,7 +100,7 @@ export function ShortListItem({ short }: ShortListItemProps) {
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
     };
-  }, [startTime, endTime]);
+  }, [startTime, endTime, isYouTube]);
 
   return (
     <Card
@@ -98,13 +110,39 @@ export function ShortListItem({ short }: ShortListItemProps) {
     >
       <Link href={`/inspire-me?id=${short.id}`} className="block group">
         <CardContent className="p-0 flex flex-col md:flex-row">
-          <div className="w-full md:w-2/3 relative aspect-video">
-            {(short.videoUrl.includes('youtube.com') || short.videoUrl.includes('youtu.be')) ? (
-              <img
-                src={short.thumbnailUrl}
-                alt={short.title}
-                className="object-cover w-full h-full"
-              />
+          <div className="w-full md:w-2/3 relative aspect-video bg-black">
+            {isYouTube ? (
+              <>
+                <img
+                  src={short.thumbnailUrl}
+                  alt={short.title}
+                  className={`object-cover w-full h-full transition-opacity duration-300 ${isHovering ? 'opacity-0' : 'opacity-100'}`}
+                />
+                {isHovering && videoId && (
+                  <div className="absolute inset-0 z-10 pointer-events-none">
+                    <YouTube
+                      videoId={videoId}
+                      opts={{
+                        width: '100%',
+                        height: '100%',
+                        playerVars: {
+                          autoplay: 1,
+                          mute: 1,
+                          controls: 0,
+                          modestbranding: 1,
+                          rel: 0,
+                          showinfo: 0,
+                          loop: 1,
+                          playlist: videoId,
+                          start: Math.floor(startTime),
+                        },
+                      }}
+                      className="w-full h-full"
+                      iframeClassName="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <video
                 ref={videoRef}
@@ -116,8 +154,8 @@ export function ShortListItem({ short }: ShortListItemProps) {
                 className="object-cover w-full h-full"
               ></video>
             )}
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
-              <PlayCircle className={`h-12 w-12 text-white/70 transition-all duration-300 ${isHovering && !(short.videoUrl.includes('youtube.com') || short.videoUrl.includes('youtu.be')) ? 'opacity-0 scale-75' : 'group-hover:text-white group-hover:scale-110'}`} />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center pointer-events-none">
+              <PlayCircle className={`h-12 w-12 text-white/70 transition-all duration-300 ${isHovering ? 'opacity-0 scale-75' : 'group-hover:text-white group-hover:scale-110'}`} />
             </div>
           </div>
           <div className="w-full md:w-1/3 p-4 flex flex-col justify-center">

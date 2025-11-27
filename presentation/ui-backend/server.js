@@ -34,10 +34,26 @@ app.get('/api/movies', async (req, res) => {
     const movies = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     const moviesWithSignedUrls = await Promise.all(movies.map(async (movie) => {
-      if (movie.source === 'youtube') {
-        if (!movie.public_url && movie.file_path) {
-          movie.public_url = movie.file_path;
+      logger.log(`Processing movie: ${movie.id}, source: ${movie.source}, file_path: ${movie.file_path}`);
+
+      // Check if it's a YouTube video (explicit source OR detected in file_path)
+      const isYouTube = movie.source === 'youtube' ||
+        (movie.file_path && (movie.file_path.includes('youtube.com') || movie.file_path.includes('youtu.be')));
+
+      if (isYouTube) {
+        // Clean up file_path if it was accidentally prefixed with gs://
+        let cleanUrl = movie.file_path;
+        if (cleanUrl && cleanUrl.startsWith('gs://')) {
+          cleanUrl = cleanUrl.replace('gs://', '');
         }
+
+        // If public_url is missing or looks like a GCS signed URL (which would be wrong for YT), use the clean URL
+        if (!movie.public_url || movie.public_url.startsWith('https://storage.googleapis.com/')) {
+          movie.public_url = cleanUrl;
+        }
+
+        // Ensure source is set correctly for the frontend to render the YouTube player
+        movie.source = 'youtube';
         return movie;
       }
 

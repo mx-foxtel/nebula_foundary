@@ -8,7 +8,7 @@ import { Footer } from "@/components/layout/footer";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "CineShorts",
+  title: "Nebula Foundry",
   description: "Bite-sized stories from your favorite films.",
 };
 

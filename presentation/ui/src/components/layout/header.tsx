@@ -21,16 +21,16 @@ const navItems = [
 ];
 
 const SearchFallback = () => {
-    return (
-        <div className="relative w-full max-w-xs">
-             <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-                placeholder="Search..."
-                className="w-full pl-10"
-                disabled
-            />
-        </div>
-    )
+  return (
+    <div className="relative w-full max-w-xs">
+      <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        placeholder="Search..."
+        className="w-full pl-10"
+        disabled
+      />
+    </div>
+  )
 }
 
 const ProfileAvatar = () => {
@@ -80,8 +80,10 @@ export function Header() {
       <div className="container flex h-14 items-center">
         <div className="mr-4 hidden items-center md:flex">
           <Link href="/profiles" className="mr-6 flex items-center space-x-2">
-            <Clapperboard className="h-6 w-6 text-primary" />
-            <span className="hidden font-bold sm:inline-block">CineShorts</span>
+            <div className="relative h-8 w-8">
+              <Image src="/logo.png" alt="Nebula Foundry Logo" fill className="object-contain rounded-full" />
+            </div>
+            <span className="hidden font-bold sm:inline-block">Nebula Foundry</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {navItems.map((item) => (
@@ -102,8 +104,10 @@ export function Header() {
             <SheetContent side="left">
               <div className="flex flex-col gap-6">
                 <Link href="/profiles" className="flex items-center space-x-2" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Clapperboard className="h-6 w-6 text-primary" />
-                  <span className="font-bold">CineShorts</span>
+                  <div className="relative h-8 w-8">
+                    <Image src="/logo.png" alt="Nebula Foundry Logo" fill className="object-contain rounded-full" />
+                  </div>
+                  <span className="font-bold">Nebula Foundry</span>
                 </Link>
                 <nav className="flex flex-col gap-4">
                   {navItems.map((item) => (
@@ -120,7 +124,7 @@ export function Header() {
             <Search />
           </Suspense>
           <Suspense fallback={null}>
-             <ProfileAvatar />
+            <ProfileAvatar />
           </Suspense>
         </div>
       </div>

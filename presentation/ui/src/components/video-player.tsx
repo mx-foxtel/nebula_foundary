@@ -8,6 +8,8 @@ import type { ShortWithMovieInfo } from '@/lib/types';
 import { Volume2, VolumeX, Play, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import YouTube, { YouTubePlayer } from 'react-youtube';
+import { getYouTubeId } from '@/lib/utils';
 
 interface VideoPlayerProps {
   short: ShortWithMovieInfo;
@@ -21,9 +23,9 @@ const parseTime = (time: string | number | undefined): number | undefined => {
     // Format is MM:SS:ms.us or similar - we only care about MM and SS
     const parts = time.split(':').map(part => parseInt(part, 10));
     if (parts.length >= 2) {
-        const minutes = parts[0] || 0;
-        const seconds = parts[1] || 0;
-        return (minutes * 60) + seconds;
+      const minutes = parts[0] || 0;
+      const seconds = parts[1] || 0;
+      return (minutes * 60) + seconds;
     }
   }
   return undefined;
@@ -36,55 +38,75 @@ export function VideoPlayer({ short, isFirst = false }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(isFirst);
   const [isMuted, setIsMuted] = useState(false); // Sound on by default
   const [videoError, setVideoError] = useState(false);
+  const [youTubePlayer, setYouTubePlayer] = useState<YouTubePlayer | null>(null);
 
   // Standardize the URL by removing any query parameters like authuser
   const cleanVideoUrl = short.videoUrl.split('?')[0];
+
+  const videoId = getYouTubeId(short.videoUrl);
+  const isYouTube = !!videoId;
 
   const startTime = parseTime(short.startTime);
   const endTime = parseTime(short.endTime);
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     console.error('Video Error:', {
-        message: "Failed to load video.",
-        short,
-        errorEvent: e.nativeEvent
+      message: "Failed to load video.",
+      short,
+      errorEvent: e.nativeEvent
     });
     setVideoError(true);
     setIsPlaying(false);
   };
-  
+
   const playVideo = useCallback(() => {
+    if (isYouTube) {
+      if (youTubePlayer) {
+        youTubePlayer.playVideo();
+        setIsPlaying(true);
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (video && !videoError) {
       if (startTime !== undefined && (video.currentTime < startTime || (endTime !== undefined && video.currentTime >= endTime))) {
         video.currentTime = startTime;
       }
       video.play().catch(error => {
-          // Autoplay with sound often fails. We can try to play muted as a fallback.
-          if (error.name === 'NotAllowedError' && video.muted === false) {
-              console.warn('Autoplay with sound failed. Retrying muted.');
-              video.muted = true;
-              setIsMuted(true);
-              video.play().catch(err => {
-                 console.error("Video play failed even when muted:", err);
-                 setIsPlaying(false);
-              })
-          } else {
-            console.error("Video play failed:", error);
+        // Autoplay with sound often fails. We can try to play muted as a fallback.
+        if (error.name === 'NotAllowedError' && video.muted === false) {
+          console.warn('Autoplay with sound failed. Retrying muted.');
+          video.muted = true;
+          setIsMuted(true);
+          video.play().catch(err => {
+            console.error("Video play failed even when muted:", err);
             setIsPlaying(false);
-          }
+          })
+        } else {
+          console.error("Video play failed:", error);
+          setIsPlaying(false);
+        }
       });
       setIsPlaying(true);
     }
-  }, [startTime, endTime, videoError]);
+  }, [startTime, endTime, videoError, isYouTube, youTubePlayer]);
 
   const pauseVideo = useCallback(() => {
+    if (isYouTube) {
+      if (youTubePlayer) {
+        youTubePlayer.pauseVideo();
+        setIsPlaying(false);
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (video) {
       video.pause();
       setIsPlaying(false);
     }
-  }, []);
+  }, [isYouTube, youTubePlayer]);
 
   // Intersection Observer for auto-play/pause
   useEffect(() => {
@@ -115,42 +137,56 @@ export function VideoPlayer({ short, isFirst = false }: VideoPlayerProps) {
 
   // Set initial start time
   useEffect(() => {
+    if (isYouTube) return;
     const video = videoRef.current;
     if (!video || startTime === undefined) return;
 
     const setupVideo = () => {
       video.currentTime = startTime;
     };
-    
+
     if (video.readyState >= 1) { // HAVE_METADATA
-        setupVideo();
+      setupVideo();
     } else {
-        video.addEventListener('loadedmetadata', setupVideo, { once: true });
+      video.addEventListener('loadedmetadata', setupVideo, { once: true });
     }
-    
+
     return () => video.removeEventListener('loadedmetadata', setupVideo);
-  }, [startTime]);
+  }, [startTime, isYouTube]);
 
   // Loop functionality
   useEffect(() => {
+    if (isYouTube) return;
     const video = videoRef.current;
     if (!video || startTime === undefined || endTime === undefined) return;
 
     const handleTimeUpdate = () => {
-        if (video.currentTime >= endTime) {
-            video.currentTime = startTime;
-            if (!isPlaying) {
-                // If it was paused when it ended, keep it paused at the start
-                video.pause();
-            }
+      if (video.currentTime >= endTime) {
+        video.currentTime = startTime;
+        if (!isPlaying) {
+          // If it was paused when it ended, keep it paused at the start
+          video.pause();
         }
+      }
     };
     video.addEventListener('timeupdate', handleTimeUpdate);
     return () => video.removeEventListener('timeupdate', handleTimeUpdate);
-  }, [startTime, endTime, isPlaying]);
+  }, [startTime, endTime, isPlaying, isYouTube]);
 
   const togglePlay = () => {
     if (videoError) return;
+    if (isYouTube) {
+      if (youTubePlayer) {
+        // 1 = playing
+        if (youTubePlayer.getPlayerState() === 1) {
+          pauseVideo();
+        } else {
+          playVideo();
+        }
+      }
+      return;
+    }
+
     if (videoRef.current?.paused) {
       playVideo();
     } else {
@@ -160,6 +196,19 @@ export function VideoPlayer({ short, isFirst = false }: VideoPlayerProps) {
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isYouTube) {
+      if (youTubePlayer) {
+        if (youTubePlayer.isMuted()) {
+          youTubePlayer.unMute();
+          setIsMuted(false);
+        } else {
+          youTubePlayer.mute();
+          setIsMuted(true);
+        }
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (video) {
       video.muted = !video.muted;
@@ -168,33 +217,67 @@ export function VideoPlayer({ short, isFirst = false }: VideoPlayerProps) {
   };
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
-      <video
-        key={cleanVideoUrl} // Force re-render on short change
-        ref={videoRef}
-        src={cleanVideoUrl}
-        muted={isMuted}
-        playsInline
-        loop={endTime === undefined} // Native loop only if no custom end time
-        className="h-full w-full object-contain bg-black"
-        // crossOrigin="use-credentials"
-        onError={handleVideoError}
-        onClick={togglePlay}
-      >
-        {/* Subtitles are not part of the new data structure yet */}
-      </video>
+    <div ref={containerRef} className="relative h-full w-full bg-black">
+      {isYouTube && videoId ? (
+        <YouTube
+          videoId={videoId}
+          onReady={(event) => {
+            setYouTubePlayer(event.target);
+            if (isMuted) event.target.mute();
+          }}
+          onEnd={(event) => {
+            if (endTime !== undefined && startTime !== undefined) {
+              event.target.seekTo(startTime);
+              event.target.playVideo();
+            }
+          }}
+          opts={{
+            width: '100%',
+            height: '100%',
+            playerVars: {
+              autoplay: isPlaying ? 1 : 0,
+              mute: isMuted ? 1 : 0,
+              controls: 0,
+              modestbranding: 1,
+              rel: 0,
+              showinfo: 0,
+              loop: endTime === undefined ? 1 : 0,
+              playlist: endTime === undefined ? videoId : undefined,
+              start: startTime !== undefined ? Math.floor(startTime) : undefined,
+              end: endTime !== undefined ? Math.floor(endTime) : undefined
+            },
+          }}
+          className="h-full w-full"
+          iframeClassName="h-full w-full object-contain"
+        />
+      ) : (
+        <video
+          key={cleanVideoUrl} // Force re-render on short change
+          ref={videoRef}
+          src={cleanVideoUrl}
+          muted={isMuted}
+          playsInline
+          loop={endTime === undefined} // Native loop only if no custom end time
+          className="h-full w-full object-contain bg-black"
+          // crossOrigin="use-credentials"
+          onError={handleVideoError}
+          onClick={togglePlay}
+        >
+          {/* Subtitles are not part of the new data structure yet */}
+        </video>
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4 text-white pointer-events-none">
         <div className="flex items-center gap-3 mb-2 group pointer-events-auto w-fit">
           <Link href={`/movies/${short.movie.id}`} className="flex items-center gap-3">
             <div className="relative h-10 w-10 flex-shrink-0">
-                <Image
+              <Image
                 src={short.movie.poster_url}
                 alt={short.movie.file_name}
                 data-ai-hint="movie poster"
                 fill
                 className="rounded-full object-cover border-2 border-transparent group-hover:border-primary transition-all"
-                />
+              />
             </div>
             <div className="font-semibold group-hover:text-primary transition-colors">{short.movie.file_name}</div>
           </Link>
@@ -220,12 +303,12 @@ export function VideoPlayer({ short, isFirst = false }: VideoPlayerProps) {
           {isMuted ? <VolumeX /> : <Volume2 />}
         </Button>
       </div>
-       {videoError ? (
-           <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center p-4 sm:p-6 rounded-lg text-white pointer-events-none">
-            <VideoOff className="h-12 w-12 text-destructive mb-4" />
-            <p className="font-semibold text-base">This video could not be played.</p>
-          </div>
-        ) : !isPlaying && (
+      {videoError ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center p-4 sm:p-6 rounded-lg text-white pointer-events-none">
+          <VideoOff className="h-12 w-12 text-destructive mb-4" />
+          <p className="font-semibold text-base">This video could not be played.</p>
+        </div>
+      ) : !isPlaying && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
             className="pointer-events-auto p-4 rounded-full bg-black/30 hover:bg-black/50 transition-colors cursor-pointer"
