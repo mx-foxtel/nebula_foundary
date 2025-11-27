@@ -27,8 +27,10 @@ pytest.ini
 presentation/*/node_modules
 presentation/ui-backend/node_modules
 presentation/docs
+presentation/*/.next
 
 .venv/
 
 utils.sh
 events.json
+presentation/ui-backend/package-lock.json
