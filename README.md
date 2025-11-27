@@ -1,4 +1,7 @@
-# Media Metadata Generator
+# Nebula Foundry - a media metadata generator
+<p align="center">
+  <img src="presentation/ui/public/logo.png" alt="Nebula Foundry logo" width="100" className="object-contain rounded-full" >
+</p>
 
 This project is a scalable, event-driven pipeline built on Google Cloud to automatically generate rich metadata for media files. When a video, audio, or document file is uploaded to a Google Cloud Storage (GCS) bucket, this system triggers a series of serverless Cloud Run services to generate:
 
@@ -153,8 +156,9 @@ This will provision all the necessary resources: GCS buckets, Pub/Sub topics, Cl
 
 4.  **Enable the search experience**: Terraform will create a empty datastore. You still need to go to AI Applications -> data store and connect it to the firestore database. Once it has indexed all items, the datastore will be enabled to be attached to an AI application (your search application). 
 
-Go to AI Application - Apps - Create App. 
-Choose Custom Search (general)
-Choose App Name, set location to global
-Choose the datastore that you've just created.
+- Go to AI Application - Apps - Create App. 
+- Choose Custom Search (general)
+- Choose App Name, set location to global
+- Choose the datastore that you've just created.
+
 ---

@@ -34,3 +34,5 @@ presentation/*/.next
 utils.sh
 events.json
 presentation/ui-backend/package-lock.json
+presentation/node_modules/
+
