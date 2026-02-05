@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 const navItems = [
   { href: "/browse", label: "Home" },
   { href: "/movies", label: "Movies" },
+  { href: "/upload", label: "Upload" },
   { href: "/inspire-me", label: "What to Watch" },
 ];
 

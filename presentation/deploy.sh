@@ -32,7 +32,7 @@ submit_deployment() {
   # The build context (--dir) is the service directory, 
   # and the config file is expected inside it.
   gcloud builds submit "$SERVICE_DIR" --config="${SERVICE_DIR}/${DEPLOY_CONFIG_FILE}" \
-    --substitutions=_IMAGE_TAG=${IMAGE_TAG},_DOCKERFILE_PATH=Dockerfile
+    --substitutions=_IMAGE_TAG=${IMAGE_TAG},_DOCKERFILE_PATH=Dockerfile,_SERVICE_NAME=${SERVICE_NAME},_REGION=${GCP_REGION}
 }
 
 # Function to deploy the backend using Cloud Build

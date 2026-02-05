@@ -1,6 +1,6 @@
 import { logger } from "./logger";
 
-const API_URL = process.env.API_URL || 'http://localhost:9002';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3001';
 
 logger.log(`Resolved API Target URL: ${API_URL}`);
 
@@ -37,4 +37,32 @@ export async function search(query: string) {
 export async function getMovies() {
   logger.log(`getMovies`);
   return fetchApi('/api/movies');
+}
+
+export async function getSignedUploadUrl(fileName: string, contentType: string) {
+  logger.log(`getSignedUploadUrl: ${fileName}`);
+  return fetchApi('/api/upload/signed-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fileName, contentType }),
+  });
+}
+
+export async function publishUpload(
+  assetId: string,
+  fileName: string,
+  filePath: string,
+  contentType: string
+) {
+  logger.log(`publishUpload: ${assetId}`);
+  return fetchApi('/api/upload/publish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ assetId, fileName, filePath, contentType }),
+  });
+}
+
+export async function getAssetStatus(assetId: string) {
+  logger.log(`getAssetStatus: ${assetId}`);
+  return fetchApi(`/api/upload/status/${encodeURIComponent(assetId)}`);
 }

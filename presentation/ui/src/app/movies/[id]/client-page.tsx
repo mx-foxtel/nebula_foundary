@@ -23,6 +23,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MovieChat } from '@/components/movie-chat';
 import { YouTubePlayerWrapper } from '@/components/youtube-player-wrapper';
+import { MetadataViewer } from '@/components/metadata-viewer';
 import { getYouTubeId } from '@/lib/utils';
 
 const CategorySection = ({ title, items, icon }: { title: string; items: (string | Person)[] | undefined; icon: React.ReactNode }) => {
@@ -470,11 +471,12 @@ export function MovieClientPage({ movie }: { movie: Movie }) {
             </div>
 
             <Tabs defaultValue="shorts" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 max-w-lg mb-6">
+                <TabsList className="grid w-full grid-cols-5 max-w-2xl mb-6">
                     <TabsTrigger value="shorts">Shorts</TabsTrigger>
                     <TabsTrigger value="chapters">Chapters</TabsTrigger>
                     <TabsTrigger value="transcription">Transcription</TabsTrigger>
                     <TabsTrigger value="categorization">Categorization</TabsTrigger>
+                    <TabsTrigger value="metadata">Metadata</TabsTrigger>
                 </TabsList>
                 <TabsContent value="shorts">
                     <div className="flex justify-between items-center mb-6">
@@ -523,6 +525,9 @@ export function MovieClientPage({ movie }: { movie: Movie }) {
                             <CategorySection title="Practices" items={movie.summary.practice} icon={<Clapperboard />} />
                         </CardContent>
                     </Card>
+                </TabsContent>
+                <TabsContent value="metadata">
+                    <MetadataViewer data={movie as unknown as Record<string, unknown>} title="Full Metadata" />
                 </TabsContent>
             </Tabs>
         </div>

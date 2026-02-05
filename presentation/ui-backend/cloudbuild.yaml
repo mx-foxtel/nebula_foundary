@@ -1,5 +1,5 @@
 steps:
-  # This step uses the official Docker builder to build the image.
+  # Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
@@ -7,11 +7,20 @@ steps:
       - '${_IMAGE_TAG}'
       - '--file'
       - '${_DOCKERFILE_PATH}'
-      - '.' # Use the root of the workspace as the build context
+      - '.'
 
-# This 'images' section tells Cloud Build to push the built image to the registry.
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'run'
+      - 'services'
+      - 'update'
+      - '${_SERVICE_NAME}'
+      - '--image=${_IMAGE_TAG}'
+      - '--region=${_REGION}'
+
+# Push the image to Artifact Registry
 images:
   - '${_IMAGE_TAG}'
 
-# Optional: You can specify a timeout for the build.
 timeout: '1200s'
