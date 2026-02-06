@@ -1,16 +1,7 @@
 
-import { getContent } from '@/lib/data';
-import { MoviesClient } from './movies-client';
-import { logger } from '@/lib/logger';
+import { MoviesClientWrapper } from './movies-client';
 
-export const dynamic = 'force-dynamic'
-
-export default async function MoviesPage() {
-  logger.log('Rendering MoviesPage...');
-  const content = await getContent();
-  const movies = content.movies;
-  logger.log(`MoviesPage received ${movies.length} videos.`);
-
+export default function MoviesPage() {
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-8">
@@ -20,7 +11,7 @@ export default async function MoviesPage() {
         </p>
       </div>
 
-      <MoviesClient movies={movies} />
+      <MoviesClientWrapper />
     </div>
   );
 }

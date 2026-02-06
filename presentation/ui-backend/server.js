@@ -15,8 +15,37 @@ admin.initializeApp({
 const db = admin.firestore();
 
 const app = express();
+
+// Security configuration
+const API_KEY = process.env.API_KEY || '';
+
 app.use(cors());
 app.use(express.json());
+
+// API Key authentication middleware
+const apiKeyAuth = (req, res, next) => {
+  // Skip auth if no API key is configured (development mode)
+  if (!API_KEY) {
+    return next();
+  }
+
+  const providedKey = req.headers['x-api-key'] || req.query.apiKey;
+
+  if (!providedKey || providedKey !== API_KEY) {
+    logger.warn(`Unauthorized request to ${req.path} from ${req.ip}`);
+    return res.status(401).json({ error: 'Unauthorized: Invalid or missing API key' });
+  }
+
+  next();
+};
+
+// Health check endpoint (no auth required)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// Apply API key auth to all /api routes
+app.use('/api', apiKeyAuth);
 
 const { Storage } = require('@google-cloud/storage');
 const { PubSub } = require('@google-cloud/pubsub');
@@ -243,11 +272,28 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3001;
 
-io.on('connection', (socket) => {
+// Socket.IO authentication middleware
+io.use((socket, next) => {
+  // Skip auth if no API key is configured (development mode)
+  if (!API_KEY) {
+    return next();
+  }
 
+  const apiKey = socket.handshake.auth?.apiKey || socket.handshake.query?.apiKey;
+
+  if (!apiKey || apiKey !== API_KEY) {
+    logger.warn(`Unauthorized Socket.IO connection attempt from ${socket.handshake.address}`);
+    return next(new Error('Unauthorized: Invalid or missing API key'));
+  }
+
+  next();
+});
+
+io.on('connection', (socket) => {
+  logger.log(`Socket.IO client connected: ${socket.id}`);
 
   socket.on('disconnect', () => {
-
+    logger.log(`Socket.IO client disconnected: ${socket.id}`);
   });
 
   socket.on('chat message', async (msg) => {

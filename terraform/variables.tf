@@ -135,3 +135,11 @@ variable "ui_backend_url"{
   type  = string
   default = ""
 }
+
+# Security configuration
+variable "api_key" {
+  description = "API key for securing backend endpoints. Leave empty to disable API key auth (not recommended for production)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

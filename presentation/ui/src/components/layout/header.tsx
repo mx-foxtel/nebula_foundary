@@ -12,6 +12,7 @@ import { Suspense, useState, useEffect } from "react";
 import { Search } from "@/components/search";
 import { Input } from "../ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { SettingsDialog } from "@/components/settings-dialog";
 
 
 const navItems = [
@@ -124,6 +125,7 @@ export function Header() {
           <Suspense fallback={<SearchFallback />}>
             <Search />
           </Suspense>
+          <SettingsDialog />
           <Suspense fallback={null}>
             <ProfileAvatar />
           </Suspense>

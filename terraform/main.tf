@@ -743,7 +743,7 @@ resource "google_cloud_run_service" "ui_backend_service" {
 
   template {
     spec {
-    
+
       service_account_name = google_service_account.ui_backend_sa.email
       containers {
         image = var.nebula_foundry_ui_backend_image
@@ -783,6 +783,11 @@ resource "google_cloud_run_service" "ui_backend_service" {
           name  = "VAIS_SERVING_CONFIG"
           value = var.vais_serving_config
         }
+        # Security configuration
+        env {
+          name  = "API_KEY"
+          value = var.api_key
+        }
       }
     }
   }
@@ -808,6 +813,14 @@ resource "google_cloud_run_service" "ui_service" {
         env {
           name  = "API_URL"
           value = google_cloud_run_service.ui_backend_service.status[0].url
+        }
+        env {
+          name  = "NEXT_PUBLIC_API_URL"
+          value = google_cloud_run_service.ui_backend_service.status[0].url
+        }
+        env {
+          name  = "NEXT_PUBLIC_API_KEY"
+          value = var.api_key
         }
       }
     }

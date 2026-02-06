@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { MovieCard } from '@/components/movie-card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -26,8 +25,11 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  Settings,
 } from 'lucide-react';
 import type { Movie } from '@/lib/types';
+import { getMovies } from '@/lib/api';
+import { hasApiKey } from '@/lib/auth';
 
 interface MoviesClientProps {
   movies: Movie[];
@@ -346,4 +348,75 @@ export function MoviesClient({ movies }: MoviesClientProps) {
       )}
     </div>
   );
+}
+
+// Wrapper component that fetches data client-side
+export function MoviesClientWrapper() {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unauthorized, setUnauthorized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check if API key exists before fetching
+    if (!hasApiKey()) {
+      setUnauthorized(true);
+      setLoading(false);
+      return;
+    }
+
+    async function fetchMovies() {
+      try {
+        const result = await getMovies();
+        if (result?._unauthorized) {
+          setUnauthorized(true);
+        } else if (Array.isArray(result)) {
+          setMovies(result);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load movies');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMovies();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading videos...</p>
+      </div>
+    );
+  }
+
+  if (unauthorized) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <Settings className="h-16 w-16 text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">API Key Required</h2>
+        <p className="text-muted-foreground max-w-md">
+          Please click the settings icon (gear) in the header to enter your API key.
+          This is required to access the video library.
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <AlertCircle className="h-16 w-16 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Error Loading Videos</h2>
+        <p className="text-muted-foreground max-w-md">{error}</p>
+        <Button onClick={() => window.location.reload()} className="mt-4">
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  return <MoviesClient movies={movies} />;
 }
