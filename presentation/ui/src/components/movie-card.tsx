@@ -9,13 +9,18 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie }: MovieCardProps) {
+  // Use a better placeholder if the poster_url is a placehold.co URL
+  const posterUrl = movie.poster_url?.includes('placehold.co')
+    ? `https://placehold.co/400x600/1a1a2e/FFFFFF?text=${encodeURIComponent(movie.file_name?.slice(0, 15) || 'Video')}`
+    : movie.poster_url;
+
   return (
     <Link href={`/movies/${movie.id}`} key={movie.id} className="group block">
       <Card className="overflow-hidden transition-all duration-300 ease-in-out hover:shadow-primary/20 hover:shadow-lg hover:-translate-y-1 border-transparent hover:border-primary/50">
         <CardContent className="p-0">
           <div className="relative aspect-[2/3]">
             <Image
-              src={movie.poster_url}
+              src={posterUrl}
               alt={movie.file_name}
               data-ai-hint="movie poster"
               fill
