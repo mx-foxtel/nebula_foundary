@@ -191,6 +191,19 @@ gsutil cors set presentation/cors.json gs://your-gcp-project-id-input
 
 ## How to Use
 
+### Finding Your Service URLs
+
+After deployment, get the Cloud Run URLs:
+
+```bash
+# All services at once
+gcloud run services list --region=us-central1 --format='table(SERVICE, URL)'
+
+# Individual service URLs
+gcloud run services describe nebula-foundry-ui --region=us-central1 --format='value(status.url)'
+gcloud run services describe nebula-foundry-ui-backend --region=us-central1 --format='value(status.url)'
+```
+
 ### Via the Web UI
 
 1.  Navigate to the deployed UI URL (the Cloud Run URL for `nebula-foundry-ui`).
