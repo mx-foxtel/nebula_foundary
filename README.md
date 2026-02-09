@@ -345,6 +345,13 @@ Additionally, Terraform grants the **Vertex AI Service Agent** (`service-PROJECT
 -   **API key auth is optional** — if the `API_KEY` environment variable is not set on the backend, all requests are allowed through. This is convenient for development but not recommended for production.
 -   **The frontend stores the API key in `localStorage`**, keyed as `nebula_foundry_api_key`. It sends it as an `X-API-Key` header on every request. Configure it via the settings dialog (gear icon in the header).
 
+### Next.js `NEXT_PUBLIC_*` Environment Variables
+
+-   **`NEXT_PUBLIC_*` variables are inlined at build time, not runtime.** Setting them as Cloud Run environment variables in Terraform has no effect on client-side code. They must be available during `npm run build` inside the Docker image. The `deploy.sh` script handles this by auto-resolving the backend URL and passing it as a Docker `--build-arg`.
+-   **Do not rely on `.env.local` for production builds.** The file is excluded from Docker builds via `.dockerignore`. If the deployed UI is calling `localhost` instead of the Cloud Run backend, this is the cause — redeploy with `./deploy.sh all`.
+-   **Always deploy the backend before the UI.** The UI build needs the backend's Cloud Run URL. Running `./deploy.sh all` handles ordering automatically. Running `./deploy.sh ui` alone will fail if the backend hasn't been deployed yet.
+-   **To override the backend URL** (e.g. custom domain), set it as an env var: `NEXT_PUBLIC_API_URL=https://custom.url ./deploy.sh ui`.
+
 ### Vertex AI Search (VAIS)
 
 -   **Search won't work until you manually create the search app** in the Google Cloud console and connect the data store to Firestore. Terraform only creates the empty data store.
