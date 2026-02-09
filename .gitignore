@@ -28,6 +28,7 @@ presentation/*/node_modules
 presentation/ui-backend/node_modules
 presentation/docs
 presentation/*/.next
+presentation/ui/.env.production
 
 .venv/
 

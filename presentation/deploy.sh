@@ -23,14 +23,11 @@ submit_deployment() {
   local SERVICE_DIR=$1 # ui or ui-backend
   local SERVICE_NAME=$2
   local SERVICE_DIR="./${SERVICE_DIR}"
-  
-  echo "Deploying ${SERVICE_NAME} via Cloud Build... ${SERVICE_DIR}"
-  
-  # Image previously published by artifact_publish.sh
-  local IMAGE_TAG="${BASE_IMAGE_TAG}/${SERVICE_NAME}:latest" 
 
-  # The build context (--dir) is the service directory, 
-  # and the config file is expected inside it.
+  echo "Deploying ${SERVICE_NAME} via Cloud Build... ${SERVICE_DIR}"
+
+  local IMAGE_TAG="${BASE_IMAGE_TAG}/${SERVICE_NAME}:latest"
+
   gcloud builds submit "$SERVICE_DIR" --config="${SERVICE_DIR}/${DEPLOY_CONFIG_FILE}" \
     --substitutions=_IMAGE_TAG=${IMAGE_TAG},_DOCKERFILE_PATH=Dockerfile,_SERVICE_NAME=${SERVICE_NAME},_REGION=${GCP_REGION}
 }
@@ -42,13 +39,13 @@ deploy_backend() {
 
 # Function to deploy the UI using Cloud Build
 deploy_ui() {
-  # Resolve the backend URL for NEXT_PUBLIC_API_URL (must be baked in at build time)
+  # Resolve the backend URL (must be baked into the Next.js build)
   local BACKEND_URL
   BACKEND_URL=$(gcloud run services describe nebula-foundry-ui-backend \
     --region="${GCP_REGION}" --format='value(status.url)' 2>/dev/null || echo "")
 
   if [ -z "$BACKEND_URL" ]; then
-    echo "Error: Could not resolve backend URL. Deploy the backend first (./deploy.sh backend) or set NEXT_PUBLIC_API_URL env var."
+    echo "Error: Could not resolve backend URL. Deploy the backend first (./deploy.sh backend)."
     echo "You can also run './deploy.sh all' which deploys the backend before the UI."
     exit 1
   fi
@@ -57,14 +54,17 @@ deploy_ui() {
   BACKEND_URL="${NEXT_PUBLIC_API_URL:-$BACKEND_URL}"
   echo "Using backend URL: ${BACKEND_URL}"
 
-  local SERVICE_DIR="./ui"
-  local SERVICE_NAME="nebula-foundry-ui"
-  local IMAGE_TAG="${BASE_IMAGE_TAG}/${SERVICE_NAME}:latest"
+  # Write .env.production so Next.js bakes the correct URL at build time
+  echo "NEXT_PUBLIC_API_URL=${BACKEND_URL}" > ./ui/.env.production
+  if [ -n "${NEXT_PUBLIC_API_KEY:-}" ]; then
+    echo "NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}" >> ./ui/.env.production
+  fi
+  echo "Generated ./ui/.env.production"
 
-  echo "Deploying ${SERVICE_NAME} via Cloud Build... ${SERVICE_DIR}"
+  submit_deployment "ui" "nebula-foundry-ui"
 
-  gcloud builds submit "$SERVICE_DIR" --config="${SERVICE_DIR}/${DEPLOY_CONFIG_FILE}" \
-    --substitutions=_IMAGE_TAG=${IMAGE_TAG},_DOCKERFILE_PATH=Dockerfile,_SERVICE_NAME=${SERVICE_NAME},_REGION=${GCP_REGION},_NEXT_PUBLIC_API_URL=${BACKEND_URL},_NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
+  # Clean up generated file
+  rm -f ./ui/.env.production
 }
 
 # Main logic

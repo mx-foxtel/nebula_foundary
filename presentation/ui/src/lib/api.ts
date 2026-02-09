@@ -1,7 +1,7 @@
 import { logger } from "./logger";
 import { getStoredApiKey } from "./auth";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 logger.log(`Resolved API Target URL: ${API_URL}`);
 
