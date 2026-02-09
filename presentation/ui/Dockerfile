@@ -3,6 +3,14 @@ FROM node:22
 # Create and change to the app directory.
 WORKDIR /app
 
+# Build arguments for Next.js public env vars (inlined at build time)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_KEY
+
+# Make build args available as env vars during build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_KEY=$NEXT_PUBLIC_API_KEY
+
 # Copy application dependency manifests to the container image.
 # A wildcard is used to ensure both package.json AND package-lock.json are copied.
 # Copying this separately prevents re-running npm install on every code change.

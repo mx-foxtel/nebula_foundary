@@ -42,7 +42,29 @@ deploy_backend() {
 
 # Function to deploy the UI using Cloud Build
 deploy_ui() {
-  submit_deployment "ui" "nebula-foundry-ui"
+  # Resolve the backend URL for NEXT_PUBLIC_API_URL (must be baked in at build time)
+  local BACKEND_URL
+  BACKEND_URL=$(gcloud run services describe nebula-foundry-ui-backend \
+    --region="${GCP_REGION}" --format='value(status.url)' 2>/dev/null || echo "")
+
+  if [ -z "$BACKEND_URL" ]; then
+    echo "Error: Could not resolve backend URL. Deploy the backend first (./deploy.sh backend) or set NEXT_PUBLIC_API_URL env var."
+    echo "You can also run './deploy.sh all' which deploys the backend before the UI."
+    exit 1
+  fi
+
+  # Allow override via env var (e.g. for custom domains)
+  BACKEND_URL="${NEXT_PUBLIC_API_URL:-$BACKEND_URL}"
+  echo "Using backend URL: ${BACKEND_URL}"
+
+  local SERVICE_DIR="./ui"
+  local SERVICE_NAME="nebula-foundry-ui"
+  local IMAGE_TAG="${BASE_IMAGE_TAG}/${SERVICE_NAME}:latest"
+
+  echo "Deploying ${SERVICE_NAME} via Cloud Build... ${SERVICE_DIR}"
+
+  gcloud builds submit "$SERVICE_DIR" --config="${SERVICE_DIR}/${DEPLOY_CONFIG_FILE}" \
+    --substitutions=_IMAGE_TAG=${IMAGE_TAG},_DOCKERFILE_PATH=Dockerfile,_SERVICE_NAME=${SERVICE_NAME},_REGION=${GCP_REGION},_NEXT_PUBLIC_API_URL=${BACKEND_URL},_NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
 }
 
 # Main logic

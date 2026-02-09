@@ -7,6 +7,10 @@ steps:
       - '${_IMAGE_TAG}'
       - '--file'
       - '${_DOCKERFILE_PATH}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_URL=${_NEXT_PUBLIC_API_URL}'
+      - '--build-arg'
+      - 'NEXT_PUBLIC_API_KEY=${_NEXT_PUBLIC_API_KEY}'
       - '.'
 
   # Deploy to Cloud Run
