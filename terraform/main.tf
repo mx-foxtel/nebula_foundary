@@ -60,6 +60,13 @@ resource "google_storage_bucket" "input_buckets" {
   location                    = var.region
   uniform_bucket_level_access = true
   depends_on                  = [google_project_service.apis["storage.googleapis.com"]]
+
+  cors {
+    origin          = var.cors_allowed_origins
+    method          = ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS"]
+    response_header = ["*"]
+    max_age_seconds = 3600
+  }
 }
 
 ################################################################################

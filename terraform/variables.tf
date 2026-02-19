@@ -15,6 +15,12 @@ variable "input_bucket_names" {
   default     = []
 }
 
+variable "cors_allowed_origins" {
+  description = "List of origins allowed for CORS on input buckets. Use [\"*\"] to allow all origins."
+  type        = list(string)
+  default     = ["*"]
+}
+
 variable "output_bucket_name" {
   description = "The Google Cloud Storage bucket name for output files."
   type        = string
