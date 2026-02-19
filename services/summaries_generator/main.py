@@ -13,11 +13,13 @@ from flask import Flask, request
 
 from common.media_asset_manager import MediaAssetManager
 from common.logging_config import configure_logger
+from common.content_classifier import classify_content
 from .structured_output_schema import (
     SUMMARY_SCHEMA,
     KEY_SECTIONS_SCHEMA,
     ASSET_CATEGORIZATION_SCHEMA,
 )
+from .prompts import get_summary_prompts, get_sections_prompts, get_categorization_prompts
 
 # Configure logger for the service
 configure_logger()
@@ -110,30 +112,24 @@ def generate(
     return response.text
 
 
-def generate_summary(asset_id: str, file_location: str, source: str) -> dict:
+def generate_summary(asset_id: str, file_location: str, source: str, content_genre: str = "entertainment") -> dict:
     """
     Generates a summary for a media asset using GenAI models.
 
     Args:
         asset_id (str): The ID of the asset.
         file_location (str): GCS URI of the media file.
-    Returns:
         source (str): The source of the media file (e.g., "GCS", "youtube").
+        content_genre (str): The content genre for prompt selection.
+    Returns:
         dict: A dictionary containing the result of the summary prompt,
               or an error dictionary if generation fails.
     """
     log_extra = {"extra_fields": {"asset_id": asset_id, "file_location": file_location}}
-    logger.info("Generating summary for asset: %s", asset_id, extra=log_extra)
+    logger.info("Generating summary for asset: %s (genre: %s)", asset_id, content_genre, extra=log_extra)
     raw_response = ""
     try:
-        system_instructions_text = """
-         You are a skilled video analysis expert. 
-         You have a deep understanding of media. 
-         Your task is to analyze the provided video and extract key information. """
-        prompt = """
-            Please analyze the following video and provide summary, itemized_summary and subject_topics.
-            Avoid any additional comment or text.
-        """
+        system_instructions_text, prompt = get_summary_prompts(content_genre)
         raw_response = generate(
             prompt,
             file_location,
@@ -169,37 +165,24 @@ def generate_summary(asset_id: str, file_location: str, source: str) -> dict:
         return {"error": f"Failed to process with Gemini: {str(e)}"}
 
 
-def generate_key_sections(asset_id: str, file_location: str, source: str) -> dict:
+def generate_key_sections(asset_id: str, file_location: str, source: str, content_genre: str = "entertainment") -> dict:
     """
     Generates key sections for a media asset using GenAI models.
 
     Args:
         asset_id (str): The ID of the asset.
         file_location (str): GCS URI of the media file.
-    Returns:
         source (str): The source of the media file (e.g., "GCS", "youtube").
+        content_genre (str): The content genre for prompt selection.
+    Returns:
         dict: A dictionary containing the result of the key sections prompt,
               or an error dictionary if generation fails.
     """
     log_extra = {"extra_fields": {"asset_id": asset_id, "file_location": file_location}}
-    logger.info("Generating key sections for asset: %s", asset_id, extra=log_extra)
+    logger.info("Generating key sections for asset: %s (genre: %s)", asset_id, content_genre, extra=log_extra)
     raw_response = ""
     try:
-        # Define key section prompt
-        prompt_content = """
-            Please analyze the following video and provide a list of all the  clips with their type and timestamps. 
-            Also explain the reason why the selection of that particular timestamp has been made. 
-            Please format your response as a JSON object with the given structure. 
-            Make sure the audio is not truncated while suggesting the clips. 
-            Avoid any additional comment or text.
-            Please make sure the timestamps are accurate and reflect the precise start and end of each clip.
-            """
-        # Establish system instructions
-        system_instruction_text = """
-            You are a skilled video analysis expert. 
-            You have a deep understanding of media and can accurately identify key moments in a video. 
-            Your task is to analyze the provided video and extract all the moments clips. 
-            For each clip, you need to classify the type of moment and provide the precise start and end timestamps. """
+        system_instruction_text, prompt_content = get_sections_prompts(content_genre)
         # Define a specific model so that the default one is not used
         raw_response = generate(
             prompt_content,
@@ -237,7 +220,7 @@ def generate_key_sections(asset_id: str, file_location: str, source: str) -> dic
 
 
 def generate_asset_categorization(
-    asset_id: str, file_location: str, source: str
+    asset_id: str, file_location: str, source: str, content_genre: str = "entertainment"
 ) -> dict:
     """
     Generates Detailed Categorization for a media asset using GenAI models.
@@ -245,54 +228,19 @@ def generate_asset_categorization(
     Args:
         asset_id (str): The ID of the asset.
         file_location (str): GCS URI of the media file.
-    Returns:
         source (str): The source of the media file (e.g., "GCS", "youtube").
+        content_genre (str): The content genre for prompt selection.
+    Returns:
         dict: A dictionary containing the result of the categorizations prompt,
               or an error dictionary if generation fails.
     """
     log_extra = {"extra_fields": {"asset_id": asset_id, "file_location": file_location}}
     logger.info(
-        "Generating detailed categorization for asset: %s", asset_id, extra=log_extra
+        "Generating detailed categorization for asset: %s (genre: %s)", asset_id, content_genre, extra=log_extra
     )
     raw_response = ""
     try:
-        # Define key section prompt
-        prompt_content = """
-        Create a detailed categorization of the movie or series title.
-
-        The categories and their content are are follows:
-
-        Character
-        This item should list the various roles of people within the story, such as victims, suspects, law enforcement, and witnesses. Each role should be clearly defined to understand their function in the narrative.
-
-        Concept
-        This should describe the core idea or the foundation of the story, indicating whether it's an original creation or based on existing material.
-
-        Scenario
-        This section should outline the main plot points and the overall structure of the story, including the central problem to be solved and the genre elements like mystery or intrigue.
-
-        Setting
-        This item should detail the time and location of the story, including both the general environment (e.g., small town, city) and specific places where key events occur. It should also specify the time period, such as the decade or century.
-
-        Subject
-        This section should define the primary topic and themes of the story, such as the type of crime or the lifestyle depicted.
-
-        Practice
-        This item should describe the procedural and professional elements of the story, such as the legal, investigative, or judicial processes that are central to the plot.
-
-        Theme
-        This should list the abstract concepts and ideas explored in the narrative, such as justice, conflict, morality, and human nature.
-
-        Video Mood
-        This section should describe the intended emotional and atmospheric tone of the story, using adjectives to convey the viewing experience, such as suspenseful, chilling, or powerful.
-
-        Do not have verbose description. Use single words when adding items to the result."""
-        # Establish system instructions
-        system_instruction_text = """
-            You are a skilled video analysis expert. 
-            You have a deep understanding of media and can accurately identify key moments in a video. 
-            Your task is to analyze the provided video and extract all the moments clips. 
-            For each clip, you need to classify the type of moment and provide the precise start and end timestamps. """
+        system_instruction_text, prompt_content = get_categorization_prompts(content_genre)
         # Define a specific model so that the default one is not used
         raw_response = generate(
             prompt_content,
@@ -398,13 +346,23 @@ def handle_message():
             asset_id, "summary", {"status": "processing"}
         )
 
+        # Classify content genre for prompt selection
+        content_genre = classify_content(file_location, source, project_id, llm_model)
+        logger.info(
+            "Content genre for asset %s: %s", asset_id, content_genre, extra=log_extra
+        )
+        # Store content genre in video_details
+        asset_manager.update_asset_metadata(
+            asset_id, "video_details", {"content_genre": content_genre}
+        )
+
         # Generate both summary from asset
-        summary_results = generate_summary(asset_id, file_location, source)
+        summary_results = generate_summary(asset_id, file_location, source, content_genre)
         # Obtains key sections
-        key_sections_results = generate_key_sections(asset_id, file_location, source)
+        key_sections_results = generate_key_sections(asset_id, file_location, source, content_genre)
         # Obtains detailed categorization
         detailed_categorization_results = generate_asset_categorization(
-            asset_id, file_location, source
+            asset_id, file_location, source, content_genre
         )
 
         # --- Consolidate results and handle partial failures ---

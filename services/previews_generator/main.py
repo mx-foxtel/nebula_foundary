@@ -12,8 +12,10 @@ from google.genai import types
 
 from common.media_asset_manager import MediaAssetManager
 from common.logging_config import configure_logger
+from common.content_classifier import classify_content
 
 from .structured_output_schema import SHORTS_SCHEMA
+from .prompts import get_preview_prompts
 
 
 # Highlight Generation service Imports
@@ -130,39 +132,33 @@ def generate(
     return response.text
 
 
-def generate_previews(asset_id: str, file_location: str, source: str) -> Union[list, dict]:
+def generate_previews(asset_id: str, file_location: str, source: str, content_genre: str = "entertainment") -> Union[list, dict]:
     """
     Generates a list of potential short video clips from a media asset using Gemini.
 
     Args:
         asset_id (str): The ID of the asset.
         file_location (str): GCS URI of the media file (e.g., gs://bucket/path/to/file.mp4).
+        source (str): The source of the video, e.g., "GCS" or "youtube".
+        content_genre (str): The content genre for prompt selection.
 
     Returns:
-        Union[list, dict]: A list of preview clips on success, 
+        Union[list, dict]: A list of preview clips on success,
         or a dictionary with an 'error' key on failure.
     """
     # Initialize raw_response to ensure it's available for the exception block
     raw_response = ""
     log_extra = {"extra_fields": {"asset_id": asset_id, "file_location": file_location}}
     logger.info(
-        "Processing preview generation for asset: %s",
+        "Processing preview generation for asset: %s (genre: %s)",
         asset_id,
+        content_genre,
         extra={"extra_fields": {"asset_id": asset_id, "file_location": file_location}},
     )
 
-    
-
     try:
-        # Define the system instructions and user prompt for the model.
-        system_instructions_text = """
-        You are helping an entertainment company create shorts out of their entertainment titles. 
-        You are able to identify the scenes that would make users see the full title."""
-        prompt = """
-        Give me five key scenes that would work as a trailer for the content. 
-        Minimum scene duration should be 30 seconds.
-        No spoilers should be included. No results should be shown on screen.
-        """
+        # Select genre-appropriate prompts
+        system_instructions_text, prompt = get_preview_prompts(content_genre)
         raw_response = generate(
             prompt,
             file_location,
@@ -322,8 +318,19 @@ def handle_message():
         asset_manager.update_asset_metadata(
             asset_id, "previews", {"status": "processing"}
         )
+
+        # Classify content genre for prompt selection
+        content_genre = classify_content(file_location, source, project_id, llm_model)
+        logger.info(
+            "Content genre for asset %s: %s", asset_id, content_genre, extra=log_extra
+        )
+        # Store content genre in video_details
+        asset_manager.update_asset_metadata(
+            asset_id, "video_details", {"content_genre": content_genre}
+        )
+
         # Trigger the core logic to generate preview clips.
-        preview_results = generate_previews(asset_id, file_location, source)
+        preview_results = generate_previews(asset_id, file_location, source, content_genre)
 
         #### Trigger the core logic to generate highlights only do this if source != 'youtube'
         # video_file_name= file_name +".mp4"

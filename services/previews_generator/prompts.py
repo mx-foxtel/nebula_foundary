@@ -276,3 +276,32 @@ Given a video segment with timestamps and summary, you will:
 - First action in summary doesn't match start timestamp
 - Last action in summary doesn't match end timestamp
 - Characters mentioned who don't appear in the time range"""
+
+
+# --- Simple preview prompts (used by generate_previews in main.py) ---
+
+ENTERTAINMENT_PREVIEW_SYSTEM = """
+You are helping an entertainment company create shorts out of their entertainment titles.
+You are able to identify the scenes that would make users see the full title."""
+
+ENTERTAINMENT_PREVIEW_PROMPT = """
+Give me five key scenes that would work as a trailer for the content.
+Minimum scene duration should be 30 seconds.
+No spoilers should be included. No results should be shown on screen."""
+
+SPORTS_PREVIEW_SYSTEM = """
+You are a sports highlights editor with expertise in creating compelling clips from sporting events.
+You can identify the most exciting, dramatic, and shareable moments from any sport."""
+
+SPORTS_PREVIEW_PROMPT = """
+Give me five key highlights from this sporting event that would work as standalone clips.
+Focus on: goals/scores/points, spectacular plays or skills, controversial moments (fouls, penalties, VAR/review decisions), dramatic celebrations, and turning points in the match.
+Minimum clip duration should be 30 seconds.
+Each clip should capture the build-up, the key moment, and the immediate reaction."""
+
+
+def get_preview_prompts(genre: str) -> tuple[str, str]:
+    """Return (system_instruction, prompt) for simple preview generation."""
+    if genre == "sports":
+        return SPORTS_PREVIEW_SYSTEM, SPORTS_PREVIEW_PROMPT
+    return ENTERTAINMENT_PREVIEW_SYSTEM, ENTERTAINMENT_PREVIEW_PROMPT
