@@ -733,6 +733,12 @@ resource "google_project_iam_member" "ui_backend_sa_discoveryengine_viewer" {
   member  = "serviceAccount:${google_service_account.ui_backend_sa.email}"
 }
 
+resource "google_project_iam_member" "ui_backend_sa_pubsub_publisher" {
+  project = var.project_id
+  role    = "roles/pubsub.publisher"
+  member  = "serviceAccount:${google_service_account.ui_backend_sa.email}"
+}
+
 # UI Services
 
 
